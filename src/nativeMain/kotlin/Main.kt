@@ -1,21 +1,27 @@
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import platform.posix.perror
+import platform.posix.stat
 
-@Serializable
-private data class Message(
-    val topic: String,
-    val content: String,
-)
+private const val HelpMessage = "Usage: -c filename"
 
-private val PrettyPrintJson = Json {
-    prettyPrint = true
-}
-
-fun main() {
-    val message = Message(
-        topic = "Kotlin/Native",
-        content = "Hello!"
-    )
-    println(PrettyPrintJson.encodeToString(message))
+@OptIn(ExperimentalForeignApi::class)
+fun main(args: Array<String>) {
+    if(args.count() < 2) {
+        println(HelpMessage)
+    } else {
+        if(args[0] == "-c") {
+            memScoped {
+                val filename = args[1]
+                val statData = alloc<stat>()
+                if(stat(filename, statData.ptr) == 0) {
+                    println("${statData.st_size}")
+                } else {
+                    perror("Stat")
+                }
+            }
+        }
+    }
 }
